@@ -1,0 +1,17 @@
+BasedOnStyle: Google
+IndentWidth: 2
+
+PointerAlignment: Right
+ColumnLimit: 80
+SpacesInSquareBrackets: true
+BitFieldColonSpacing: Both
+BraceWrapping:
+  AfterFunction: true
+  AfterControlStatement: true
+  AfterStruct: true
+  SplitEmptyFunction: false
+  BeforeElse: true
+
+SortIncludes: true
+SpaceBeforeParens: Always 
+SpacesInParentheses: true

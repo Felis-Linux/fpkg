@@ -1,0 +1,10 @@
+ExtraArgs:
+  - -std=c99
+Checks: 'clang-analyzer-*,-*,cert-*,readability-*'
+CheckOptions:
+  - key: readability-identifier-naming.ClassCase
+    value: lower_case
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
