@@ -30,8 +30,9 @@ include make/tests.mk
 
 compile: libfl_compile
 install: libfl_install
-$(DOCS): 
-	@doxygen
+$(DOCS):
+	@echo "[DOCS]"
+	@doxygen 1>/dev/null
 docs: $(DOCS)
 
 .PHONY: mkbuild libfl_compile libfl_install all clean test docs

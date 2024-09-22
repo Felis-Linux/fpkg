@@ -3,19 +3,32 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ftw.h>
+#include <libfl/context.h>
 #include <libfl/io.h>
 #include <libfl/misc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#define LIBFL_IO_TMP_PATTERN "/tmp/flXXXXXX"
+#define LIBFL_IO_TMP_PATH_TEMPLATE "/tmp/fl_@@@@@@@@@@@@@"
+#define LIBFL_IO_TMP_CARAND_TEMPLATE \
+  "0123456789"                       \
+  "abcdefghijklmnopqrstuvwxyz"       \
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"       \
+  "!?"
+#define LIBFL_IO_TMP_MODE 777
 
 void libfl_io_tmp_init ( libfl_io_tmp_t *tmp ) {
-  char pattern[] = LIBFL_IO_TMP_PATTERN;
+  char path_template[] = LIBFL_IO_TMP_PATH_TEMPLATE;
+  char carand_template[] = LIBFL_IO_TMP_CARAND_TEMPLATE;
+  randpath ( sizeof ( carand_template ), carand_template,
+             sizeof ( path_template ), path_template );
 
-  tmp->dir_path = strdup ( mkdtemp ( pattern ) );
-  tmp->dir_fd = open ( tmp->dir_path, O_DIRECTORY, S_IRWXU );
+  mkdir ( path_template, LIBFL_IO_TMP_MODE );
+  chown ( path_template, g_libfl_effective_uid, g_libfl_effective_gid );
+
+  tmp->dir_path = strdup ( path_template );
+  tmp->dir_fd = open ( tmp->dir_path, O_DIRECTORY );
 }
 
 static int tmp_cleanup_nftwfunc ( const char *file_name, const struct stat *sta,
@@ -51,7 +64,7 @@ static int tmp_cleanup_nftwfunc ( const char *file_name, const struct stat *sta,
 #define NFTW_MAX_DESCRIPTORS 64
 
 void libfl_io_tmp_cleanup ( libfl_io_tmp_t *tmp ) {
+  close ( tmp->dir_fd );
   nftw ( tmp->dir_path, tmp_cleanup_nftwfunc, NFTW_MAX_DESCRIPTORS, FTW_DEPTH );
   free ( tmp->dir_path );
-  close ( tmp->dir_fd );
 }

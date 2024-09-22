@@ -3,4 +3,3 @@
 -Wextra
 -Wnomacro-redefinition
 -I./include
--DFSTEST_FUNC_

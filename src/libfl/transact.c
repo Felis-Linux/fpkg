@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ftw.h>
+#include <libfl/context.h>
 #include <libfl/io.h>
 #include <libfl/misc.h>
 #include <libfl/transact.h>
@@ -16,11 +17,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-/* \file transact.c
-   \todo implement a copy from fs function
+/* @file transact.c
+   @todo implement a copy from fs function
 */
-/// \struct libfl_transact
-/// \brief the transaction context
+/// @struct libfl_transact
+/// @brief the transaction context
 struct libfl_transact {
   /// the root path
   char *root_path;
@@ -30,10 +31,6 @@ struct libfl_transact {
   libfl_io_tmp_t tmp;
 };
 
-/// \fn libfl_transact_destroy
-/// \param transact the transaction context
-/// \brief Destroys the transaction context and attempts to cleanup the
-/// filesystem footprint.
 void libfl_transact_destroy ( libfl_transact_t *transact ) {
   libfl_io_tmp_cleanup ( &transact->tmp );
   free ( transact->root_path );
@@ -42,12 +39,7 @@ void libfl_transact_destroy ( libfl_transact_t *transact ) {
   free ( transact );
 }
 
-/// \fn libfl_transact_init
-/// \param root_path
-/// \return the libfl_transact_t
-/// \brief Intializes a sane libfl_transact_t, otherwise throws FL_EALLOC,
-/// FL_EOPENDIR into g_libfl_errno
-libfl_transact_t *libfl_transact_init ( const char *root_path ) {
+libfl_transact_t *libfl_transact_init () {
   libfl_transact_t *transact = malloc ( sizeof ( libfl_transact_t ) );
   if ( transact == NULL ) {
     g_libfl_errno = FL_EALLOC;
@@ -57,7 +49,7 @@ libfl_transact_t *libfl_transact_init ( const char *root_path ) {
 
   libfl_io_tmp_init ( &transact->tmp );
 
-  transact->root_path = strdup ( root_path );
+  transact->root_path = strdup ( g_libfl_effective_root );
   transact->root_fd = open ( transact->root_path, O_DIRECTORY );
 
   if ( transact->root_fd < 0 ) {
@@ -69,13 +61,6 @@ libfl_transact_t *libfl_transact_init ( const char *root_path ) {
   return transact;
 }
 
-/// \fn libfl_transact_recursive_mkdir
-/// \param transact the transaction context
-/// \param path the path inside the context to make
-/// \param permissions the permissions to create the DIRECTORIES with
-/// \return -1 if failed, 0 otherwise.
-/// \brief this iterates over every '/' and mkdirat's in
-/// libfl_io_tmp_get_fd(transact->tmp) \ref libfl_transact
 int libfl_transact_recursive_mkdir ( libfl_transact_t *transact, char *path,
                                      mode_t permissions ) {
   char *where = path;
@@ -96,15 +81,6 @@ int libfl_transact_recursive_mkdir ( libfl_transact_t *transact, char *path,
   return 0;
 }
 
-/// \fn libfl_transact_open
-/// \param transact the transact context
-/// \param path the path inside the transact context
-/// \param premissions the permissions to CREATE the file with
-/// \brief returns a file descriptor with the given path
-/// \return -1 if failed, a sane fd otherwise.
-///
-/// This mkdir's the dirname ( dirpath ) and then calls openat in
-/// libfl_io_tmp_get_fd(transact->tmp)
 int libfl_transact_open ( libfl_transact_t *transact, char *path,
                           mode_t permissions ) {
   char *dirpath = strdup ( path );
@@ -117,13 +93,6 @@ int libfl_transact_open ( libfl_transact_t *transact, char *path,
                   permissions );
 }
 
-/// \fn libfl_transact_symlink
-/// \param transact the transact context
-/// \param from_path the path to base the symlink on
-/// \param to_path the target (created symlink) of the symlink
-/// \brief This is a thin wrapper around symlinkat
-/// \ref libfl_transact_t
-/// \return -1 if failed, otherwise 0.
 int libfl_transact_symlink ( libfl_transact_t *transact, const char *from_path,
                              const char *to_path ) {
   if ( symlinkat ( from_path, transact->tmp.dir_fd, to_path ) < 0 ||
@@ -187,12 +156,6 @@ static int copy_link ( int fromfd, const char *from, int destfd,
   return 0;
 }
 
-/// \fn libfl_transact_copy
-/// \param transact the transaction context
-/// \param file_from the source of the copy
-/// \param file_to the destination of the copy
-/// \brief calls a static copy method
-/// \return -1 if a fail occured, otherwise 0.
 int libfl_transact_copy ( libfl_transact_t *transact, const char *file_from,
                           const char *file_to ) {
   return copy ( transact->tmp.dir_fd, file_from, file_to );
@@ -271,12 +234,6 @@ static int commit_directory_iterator ( libfl_transact_t *transact,
   return 0;
 }
 
-/// \fn libfl_transact_commit
-/// \param transact the transaction context
-/// \brief calls commit_directory_iterator
-/// \return -1 if failed, 0 otherwise.
-/// commit_directory_iterator iterates over the transact *dir* and tries to copy
-/// everything.
 int libfl_transact_commit ( libfl_transact_t *transact ) {
   return commit_directory_iterator ( transact, "" );
 }
